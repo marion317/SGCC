@@ -14,7 +14,11 @@ import { useEffect } from "react";
 import { initDatabase } from "./utils/initDatabase";
 
 
-export default function App() {
+type AppProps = {
+  allowAdmin: boolean;
+};
+
+export default function App({ allowAdmin }: AppProps) {
   useEffect(() => {
     initDatabase();
   }, []);
@@ -74,6 +78,7 @@ export default function App() {
           onLogin={handleLogin}
           onRegister={() => setAuthView("register")}
           onForgotPassword={() => setAuthView("forgot")}
+          isAdminLogin={allowAdmin}
         />
       </>
     );
@@ -102,6 +107,18 @@ export default function App() {
           userDisplayName={userDisplayName}
           userEmail={userEmail}
         />
+      </>
+    );
+  }
+
+  if (userRole === "admin" && !allowAdmin) {
+    return (
+      <>
+        <Toaster position="top-center" richColors />
+        <div className="flex items-center justify-center h-screen">
+          <h1>Acceso restringido</h1>
+          <p>Use la URL /admin para acceder al panel.</p>
+        </div>
       </>
     );
   }

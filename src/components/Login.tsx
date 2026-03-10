@@ -3,7 +3,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { LogIn, User, Shield, GraduationCap } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { toast } from "sonner";
 
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -16,14 +16,13 @@ interface LoginProps {
   onLogin: (role: 'student' | 'admin' | 'instructor', userId: string, displayName: string, email: string) => void;
   onRegister: () => void;
   onForgotPassword: () => void;
+  isAdminLogin?: boolean;
 }
 
-export function Login({ onLogin, onRegister, onForgotPassword }: LoginProps) {
+export function Login({ onLogin, onRegister, onForgotPassword, isAdminLogin = false }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [selectedRole, setSelectedRole] =
-    useState<'student' | 'admin' | 'instructor'>('admin');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,9 +49,16 @@ export function Login({ onLogin, onRegister, onForgotPassword }: LoginProps) {
 
       const userDoc = snapshot.docs[0];
       const userData = userDoc.data();
+      const userRole = userData.role as 'student' | 'admin' | 'instructor' | undefined;
 
-      if (userData.role !== selectedRole) {
-        setError(LOGIN_ERROR_MSG);
+      // Validaciones de rol según la pantalla de login
+      if (isAdminLogin && userRole !== 'admin') {
+        setError("Solo administradores pueden iniciar sesión en esta pantalla");
+        return;
+      }
+
+      if (!isAdminLogin && userRole === 'admin') {
+        setError("Este usuario administrador solo puede iniciar sesión desde la URL /admin");
         return;
       }
 
@@ -70,70 +76,44 @@ export function Login({ onLogin, onRegister, onForgotPassword }: LoginProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center p-4">
+    <div
+      className={
+        isAdminLogin
+          ? "min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4"
+          : "min-h-screen bg-gradient-to-br from-purple-600 to-purple-900 flex items-center justify-center p-4"
+      }
+    >
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-4">
           <div className="flex justify-center">
-            <div className="w-16 h-16 bg-purple-600 rounded-lg flex items-center justify-center">
-              <span className="text-white text-2xl">CA</span>
+            <div
+              className={
+                isAdminLogin
+                  ? "w-16 h-16 bg-slate-900 border border-yellow-400 rounded-lg flex items-center justify-center"
+                  : "w-16 h-16 bg-purple-600 rounded-lg flex items-center justify-center"
+              }
+            >
+              <span className="text-white text-2xl">
+                {isAdminLogin ? "AD" : "CA"}
+              </span>
             </div>
           </div>
           <div className="text-center">
             <CardTitle className="text-2xl mb-2">
-              Centro de Enseñanza Automotriz
+              {isAdminLogin
+                ? "Panel de Administración"
+                : "Centro de Enseñanza Automotriz"}
             </CardTitle>
-            <p className="text-gray-600 text-sm">Sistema de Gestión - SGCC</p>
+            <p className="text-gray-600 text-sm">
+              {isAdminLogin
+                ? "Acceso exclusivo para administradores"
+                : "Sistema de Gestión - SGCC"}
+            </p>
           </div>
         </CardHeader>
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-
-            {/* ROL */}
-            <div className="space-y-2">
-              <Label>Tipo de Usuario</Label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedRole('admin')}
-                  className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 ${
-                    selectedRole === 'admin'
-                      ? 'border-purple-600 bg-purple-50 text-purple-600'
-                      : 'border-gray-200'
-                  }`}
-                >
-                  <Shield className="w-5 h-5" />
-                  <span className="text-xs">Admin</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedRole('instructor')}
-                  className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 ${
-                    selectedRole === 'instructor'
-                      ? 'border-purple-600 bg-purple-50 text-purple-600'
-                      : 'border-gray-200'
-                  }`}
-                >
-                  <GraduationCap className="w-5 h-5" />
-                  <span className="text-xs">Instructor</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setSelectedRole('student')}
-                  className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 ${
-                    selectedRole === 'student'
-                      ? 'border-purple-600 bg-purple-50 text-purple-600'
-                      : 'border-gray-200'
-                  }`}
-                >
-                  <User className="w-5 h-5" />
-                  <span className="text-xs">Estudiante</span>
-                </button>
-              </div>
-            </div>
-
             {/* EMAIL */}
             <div className="space-y-2">
               <Label htmlFor="email">Correo</Label>
@@ -166,27 +146,35 @@ export function Login({ onLogin, onRegister, onForgotPassword }: LoginProps) {
             )}
 
             {/* OLVIDÉ CONTRASEÑA */}
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={onForgotPassword}
-                className="text-xs text-purple-600 hover:underline"
-              >
-                ¿Olvidaste tu contraseña?
-              </button>
-            </div>
+            {!isAdminLogin && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={onForgotPassword}
+                  className="text-xs text-purple-600 hover:underline"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              </div>
+            )}
 
             {/* BOTÓN */}
-            <Button type="submit" className="w-full bg-purple-600 hover:bg-purple-700">
+            <Button
+              type="submit"
+              className={
+                isAdminLogin
+                  ? "w-full bg-yellow-500 hover:bg-yellow-600 text-slate-900"
+                  : "w-full bg-purple-600 hover:bg-purple-700"
+              }
+            >
               <LogIn className="w-4 h-4 mr-2" />
-              Iniciar Sesión
+              {isAdminLogin ? "Iniciar sesión como admin" : "Iniciar Sesión"}
             </Button>
-
-            {/* REGISTRO SOLO ESTUDIANTE */}
-            {selectedRole === 'student' && (
+            {/* REGISTRO */}
+            {!isAdminLogin && (
               <div className="text-center pt-2">
                 <p className="text-sm text-gray-600">
-                  ¿No tienes cuenta?{' '}
+                  ¿No tienes cuenta?{" "}
                   <button
                     type="button"
                     onClick={onRegister}
