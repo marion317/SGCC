@@ -1,18 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Toaster } from "sonner";
 import { Sidebar } from "./components/Sidebar";
 import { Header } from "./components/Header";
 import { Dashboard } from "./components/Dashboard";
-import { StudentRegistry } from "./components/StudentRegistry";
 import { Login } from "./components/Login";
 import { Register } from "./components/Register";
 import { ForgotPassword } from "./components/ForgotPassword";
 import { UserManagement } from "./components/UserManagement";
+import { CourseManagement } from "./components/CourseManagement";
 import { StudentDashboard } from "./components/student/StudentDashboard";
 import { InstructorDashboard } from "./components/instructor/InstructorDashboard";
-import { useEffect } from "react";
 import { initDatabase } from "./utils/initDatabase";
-
 
 type AppProps = {
   allowAdmin: boolean;
@@ -22,23 +20,20 @@ export default function App({ allowAdmin }: AppProps) {
   useEffect(() => {
     initDatabase();
   }, []);
-  const [currentView, setCurrentView] = useState("inscripcion");
+
+  const [currentView, setCurrentView] = useState("inicio");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userRole, setUserRole] = useState<
-    "student" | "admin" | "instructor"
-  >("admin");
+  const [userRole, setUserRole] = useState<"student" | "admin" | "instructor">("admin");
   const [userId, setUserId] = useState("");
   const [userDisplayName, setUserDisplayName] = useState("");
   const [userEmail, setUserEmail] = useState("");
-  const [authView, setAuthView] = useState<
-    "login" | "register" | "forgot"
-  >("login");
+  const [authView, setAuthView] = useState<"login" | "register" | "forgot">("login");
 
   const handleLogin = (
     role: "student" | "admin" | "instructor",
     id: string,
     displayName: string,
-    email: string,
+    email: string
   ) => {
     setIsAuthenticated(true);
     setUserRole(role);
@@ -51,9 +46,10 @@ export default function App({ allowAdmin }: AppProps) {
   const handleLogout = () => {
     setIsAuthenticated(false);
     setAuthView("login");
-    setCurrentView("inscripcion");
+    setCurrentView("inicio");
   };
 
+  /* ---- Auth views ---- */
   if (!isAuthenticated) {
     if (authView === "register") {
       return (
@@ -84,6 +80,7 @@ export default function App({ allowAdmin }: AppProps) {
     );
   }
 
+  /* ---- Vista estudiante ---- */
   if (userRole === "student") {
     return (
       <>
@@ -98,6 +95,7 @@ export default function App({ allowAdmin }: AppProps) {
     );
   }
 
+  /* ---- Vista instructor ---- */
   if (userRole === "instructor") {
     return (
       <>
@@ -111,18 +109,20 @@ export default function App({ allowAdmin }: AppProps) {
     );
   }
 
+  /* ---- Acceso admin restringido ---- */
   if (userRole === "admin" && !allowAdmin) {
     return (
       <>
         <Toaster position="top-center" richColors />
-        <div className="flex items-center justify-center h-screen">
-          <h1>Acceso restringido</h1>
-          <p>Use la URL /admin para acceder al panel.</p>
+        <div className="flex flex-col items-center justify-center h-screen gap-2">
+          <h1 className="text-xl font-bold">Acceso restringido</h1>
+          <p className="text-gray-600">Use la URL /admin para acceder al panel.</p>
         </div>
       </>
     );
   }
 
+  /* ---- Vista admin ---- */
   return (
     <>
       <Toaster position="top-center" richColors />
@@ -135,18 +135,14 @@ export default function App({ allowAdmin }: AppProps) {
           userEmail={userEmail}
           userRole={userRole}
         />
-
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Header userName={userDisplayName} userRole={userRole} />
-
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Header userName={userDisplayName} userRole={userRole} />
           <main className="flex-1 overflow-y-auto p-6">
-            {currentView === "inicio" && <Dashboard userName={userDisplayName} />}
+            {currentView === "inicio"   && <Dashboard userName={userDisplayName} />}
             {currentView === "usuarios" && <UserManagement />}
-            {currentView === "registrar" && <StudentRegistry />}
+            {currentView === "cursos"   && <CourseManagement />}
           </main>
         </div>
-      </div>
       </div>
     </>
   );
