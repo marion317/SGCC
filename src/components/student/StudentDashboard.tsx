@@ -3,7 +3,7 @@ import { StudentSidebar } from './StudentSidebar';
 import { StudentHeader } from './StudentHeader';
 import { StudentHome } from './StudentHome';
 import { StudentProfile } from './StudentProfile';
-import { StudentClasses } from './StudentClasses';
+import { StudentClasses } from './Studentclasses';
 
 interface StudentDashboardProps {
   onLogout: () => void;
