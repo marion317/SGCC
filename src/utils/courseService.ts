@@ -126,7 +126,20 @@ const generateCourseCode = async (): Promise<string> => {
 /* ==========================
    CREAR / ACTUALIZAR / ELIMINAR
 ========================== */
+/* ==========================
+   VALIDAR NOMBRE ÚNICO
+========================== */
+const assertUniqueName = async (name: string, excludeId?: string): Promise<void> => {
+  const snap = await getDocs(collection(db, "courses"));
+  const duplicate = snap.docs.find((d) => {
+    if (excludeId && d.id === excludeId) return false;
+    return (d.data().name as string) === name;
+  });
+  if (duplicate) throw new Error(`Ya existe un curso con el nombre "${name}". Elige otro nombre.`);
+};
+
 export const createCourse = async (data: CourseInput): Promise<Course> => {
+  await assertUniqueName(data.name);
   const capacity = Math.min(data.capacity, MAX_CAPACITY);
   const code = await generateCourseCode();
   const ref = await addDoc(collection(db, "courses"), {
@@ -140,6 +153,7 @@ export const createCourse = async (data: CourseInput): Promise<Course> => {
 };
 
 export const updateCourse = async (id: string, data: Partial<CourseInput>): Promise<void> => {
+  if (data.name) await assertUniqueName(data.name, id);
   const payload: any = { ...data, updatedAt: Timestamp.now() };
   if (payload.capacity) payload.capacity = Math.min(payload.capacity, MAX_CAPACITY);
   await updateDoc(doc(db, "courses", id), payload);

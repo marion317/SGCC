@@ -10,13 +10,13 @@ interface InstructorSidebarProps {
 
 export function InstructorSidebar({ currentView, onNavigate, onLogout, userName, userEmail }: InstructorSidebarProps) {
   const menuItems = [
-    { id: 'inicio', label: 'Inicio', icon: Home },
-    { id: 'programar', label: 'Programar Clases', icon: Calendar },
-    { id: 'clases', label: 'Mis Clases', icon: BookOpen },
-    { id: 'asistencia', label: 'Registrar Asistencia', icon: ClipboardCheck },
-    { id: 'evaluaciones', label: 'Evaluaciones', icon: FileText },
-    { id: 'observaciones', label: 'Observaciones', icon: MessageSquare },
-    { id: 'reportes', label: 'Reportes', icon: BarChart3 },
+    { id: 'inicio',       label: 'Inicio',              icon: Home,           functional: true  },
+    { id: 'horario',      label: 'Mi Horario',          icon: Calendar,       functional: true  },
+    { id: 'clases',       label: 'Mis Clases',          icon: BookOpen,       functional: false },
+    { id: 'asistencia',   label: 'Registrar Asistencia',icon: ClipboardCheck, functional: true  },
+    { id: 'evaluaciones', label: 'Evaluaciones',        icon: FileText,       functional: false },
+    { id: 'observaciones',label: 'Observaciones',       icon: MessageSquare,  functional: false },
+    { id: 'reportes',     label: 'Reportes',            icon: BarChart3,      functional: false },
   ];
 
   return (
@@ -29,39 +29,34 @@ export function InstructorSidebar({ currentView, onNavigate, onLogout, userName,
       <nav className="flex-1 p-4 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = item.id === 'inicio' && currentView === 'inicio';
-          const isInicio = item.id === 'inicio';
-
+          const isActive = currentView === item.id;
           return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => isInicio ? onNavigate('inicio') : undefined}
+            <button key={item.id} type="button"
+              onClick={() => item.functional ? onNavigate(item.id) : undefined}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${
                 isActive
                   ? 'bg-purple-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800'
-              }`}
-            >
+                  : item.functional
+                    ? 'text-gray-300 hover:bg-gray-800'
+                    : 'text-gray-600 cursor-not-allowed'
+              }`}>
               <Icon className="w-5 h-5" />
               <span>{item.label}</span>
+              {!item.functional && <span className="ml-auto text-xs text-gray-600">Pronto</span>}
             </button>
           );
         })}
       </nav>
 
       <div className="p-4 border-t border-gray-800">
-        <button
-          type="button"
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors text-gray-300 hover:bg-gray-800"
-        >
+        <button type="button"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors text-gray-600 cursor-not-allowed">
           <HelpCircle className="w-5 h-5" />
           <span>Soporte / Ayuda</span>
+          <span className="ml-auto text-xs text-gray-600">Pronto</span>
         </button>
-        <button 
-          onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors"
-        >
+        <button onClick={onLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors">
           <LogOut className="w-5 h-5" />
           <span>Cerrar Sesión</span>
         </button>

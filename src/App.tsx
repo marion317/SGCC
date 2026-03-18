@@ -8,6 +8,7 @@ import { Register } from "./components/Register";
 import { ForgotPassword } from "./components/ForgotPassword";
 import { UserManagement } from "./components/UserManagement";
 import { CourseManagement } from "./components/CourseManagement";
+import { ScheduleManagement } from "./components/ScheduleManagement";
 import { StudentDashboard } from "./components/student/StudentDashboard";
 import { InstructorDashboard } from "./components/instructor/InstructorDashboard";
 import { initDatabase } from "./utils/initDatabase";
@@ -104,6 +105,7 @@ export default function App({ allowAdmin }: AppProps) {
           onLogout={handleLogout}
           userDisplayName={userDisplayName}
           userEmail={userEmail}
+          userId={userId}
         />
       </>
     );
@@ -141,6 +143,7 @@ export default function App({ allowAdmin }: AppProps) {
             {currentView === "inicio"   && <Dashboard userName={userDisplayName} />}
             {currentView === "usuarios" && <UserManagement />}
             {currentView === "cursos"   && <CourseManagement />}
+            {currentView === "horarios" && <ScheduleManagement />}
           </main>
         </div>
       </div>

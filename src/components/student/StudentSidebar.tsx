@@ -1,4 +1,4 @@
-import { Home, BookOpen, MessageSquare, FileText, Calendar, HelpCircle, User, LogOut } from 'lucide-react';
+import { Home, BookOpen, MessageSquare, FileText, Calendar, ClipboardList, HelpCircle, User, LogOut } from 'lucide-react';
 
 interface StudentSidebarProps {
   currentView: string;
@@ -10,13 +10,14 @@ interface StudentSidebarProps {
 
 export function StudentSidebar({ currentView, onNavigate, onLogout, userName, userEmail }: StudentSidebarProps) {
   const menuItems = [
-    { id: 'inicio',        label: 'Inicio',             icon: Home,         functional: true  },
-    { id: 'clases',        label: 'Mis Clases',          icon: BookOpen,     functional: true  },
-    { id: 'observaciones', label: 'Observaciones',       icon: MessageSquare,functional: false },
-    { id: 'historial',     label: 'Historial Académico', icon: FileText,     functional: false },
-    { id: 'horario',       label: 'Horario',             icon: Calendar,     functional: false },
-    { id: 'soporte',       label: 'Soporte/Ayuda',       icon: HelpCircle,   functional: false },
-    { id: 'perfil',        label: 'Mi Perfil',           icon: User,         functional: true  },
+    { id: 'inicio',      label: 'Inicio',             icon: Home,          functional: true  },
+    { id: 'clases',      label: 'Mis Clases',          icon: BookOpen,      functional: true  },
+    { id: 'horario',     label: 'Mi Horario',          icon: Calendar,      functional: true  },
+    { id: 'asistencia',  label: 'Mi Asistencia',       icon: ClipboardList, functional: true  },
+    { id: 'observaciones',label: 'Observaciones',      icon: MessageSquare, functional: false },
+    { id: 'historial',   label: 'Historial Académico', icon: FileText,      functional: false },
+    { id: 'soporte',     label: 'Soporte/Ayuda',       icon: HelpCircle,    functional: false },
+    { id: 'perfil',      label: 'Mi Perfil',           icon: User,          functional: true  },
   ];
 
   return (

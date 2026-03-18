@@ -4,6 +4,8 @@ import { StudentHeader } from './StudentHeader';
 import { StudentHome } from './StudentHome';
 import { StudentProfile } from './StudentProfile';
 import { StudentClasses } from './Studentclasses';
+import { StudentSchedule } from './StudentSchedule';
+import { StudentAttendance } from './StudentAttendance';
 
 interface StudentDashboardProps {
   onLogout: () => void;
@@ -27,9 +29,11 @@ export function StudentDashboard({ onLogout, userDisplayName, userEmail, userId 
       <div className="flex-1 flex flex-col overflow-hidden">
         <StudentHeader userName={userDisplayName} userRole="student" />
         <main className="flex-1 overflow-y-auto p-6">
-          {currentView === 'inicio' && <StudentHome userName={userDisplayName} />}
-          {currentView === 'clases' && <StudentClasses userId={userId} />}
-          {currentView === 'perfil' && (
+          {currentView === 'inicio'     && <StudentHome userName={userDisplayName} />}
+          {currentView === 'clases'     && <StudentClasses userId={userId} />}
+          {currentView === 'horario'    && <StudentSchedule userId={userId} userName={userDisplayName} />}
+          {currentView === 'asistencia' && <StudentAttendance userId={userId} />}
+          {currentView === 'perfil'     && (
             <StudentProfile userId={userId} userName={userDisplayName} userEmail={userEmail} />
           )}
         </main>

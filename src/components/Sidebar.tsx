@@ -1,4 +1,4 @@
-import { Home, Users, BookOpen, FileText, FileSpreadsheet, LogOut } from 'lucide-react';
+import { Home, Users, BookOpen, Calendar, FileText, FileSpreadsheet, LogOut } from 'lucide-react';
 
 const roleLabels: Record<string, string> = {
   admin: 'Admin',
@@ -19,10 +19,11 @@ export function Sidebar({ currentView, onNavigate, onLogout, userName, userEmail
   const roleLabel = userRole ? roleLabels[userRole] : 'Admin';
 
   const menuItems = [
-    { id: 'inicio',    label: 'Inicio',              icon: Home,          functional: true  },
-    { id: 'usuarios',  label: 'Gestión de Usuarios', icon: Users,         functional: true  },
-    { id: 'cursos',    label: 'Gestión de Cursos',   icon: BookOpen,      functional: true  },
-    { id: 'historial', label: 'Historial Académico', icon: FileText,      functional: false },
+    { id: 'inicio',    label: 'Inicio',              icon: Home,            functional: true  },
+    { id: 'usuarios',  label: 'Gestión de Usuarios', icon: Users,           functional: true  },
+    { id: 'cursos',    label: 'Gestión de Cursos',   icon: BookOpen,        functional: true  },
+    { id: 'horarios',  label: 'Horarios',            icon: Calendar,        functional: true  },
+    { id: 'historial', label: 'Historial Académico', icon: FileText,        functional: false },
     { id: 'reportes',  label: 'Generar Reportes',    icon: FileSpreadsheet, functional: false },
   ];
 

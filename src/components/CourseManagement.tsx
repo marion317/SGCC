@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import {
   PlusCircle, Pencil, Trash2, BookOpen,
-  UserPlus, Users, X, Search, CheckCircle2,
+  UserPlus, Users, X, Search, CheckCircle2, ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -40,7 +40,6 @@ function StatusBadge({ status }: { status: Course['status'] }) {
 
 /* ==========================
    PANEL INSTRUCTORES
-   Lista registrados → clic para asignar, sin picker de slots
 ========================== */
 function InstructorPanel({
   type, max, list, course, onRefresh, allInstructors,
@@ -56,23 +55,17 @@ function InstructorPanel({
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [addingId, setAddingId]     = useState<string | null>(null);
 
-  /* IDs ya asignados en cualquier slot del curso */
   const assignedIds = useMemo(() => new Set([
     ...course.theoryInstructors.map((i) => i.id),
     ...course.practiceInstructors.map((i) => i.id),
   ]), [course]);
 
-  /* Disponibles filtrados */
   const available = useMemo(() => {
-    const term = search.toLowerCase();
+    const term = search.toLowerCase().trim();
     return allInstructors.filter((u) => {
       if (assignedIds.has(u.id)) return false;
       if (!term) return true;
-      return (
-        `${u.firstName} ${u.lastName}`.toLowerCase().includes(term) ||
-        u.username.toLowerCase().includes(term) ||
-        u.email.toLowerCase().includes(term)
-      );
+      return u.username.toLowerCase().includes(term);
     });
   }, [allInstructors, assignedIds, search]);
 
@@ -111,20 +104,19 @@ function InstructorPanel({
   };
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-
-      {/* —— Columna izquierda: disponibles —— */}
-      <div className="space-y-2">
+    <div className="grid grid-cols-2 gap-4" style={{minHeight: 0}}>
+      {/* Columna izquierda: disponibles */}
+      <div className="flex flex-col gap-2" style={{minHeight: 0}}>
         <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-gray-700">Instructores registrados</p>
+          <p className="text-sm font-semibold text-gray-700">Instructores disponibles</p>
           <span className="text-xs text-gray-400">{available.length} disponibles</span>
         </div>
-        <div className="relative">
+        <div className="relative flex-shrink-0">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
           <Input value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar instructor..." className="pl-8 h-8 text-sm" />
+            placeholder="Buscar por código..." className="pl-8 h-8 text-sm" />
         </div>
-        <div className="border rounded-lg max-h-64 overflow-y-auto">
+        <div className="border rounded-lg overflow-y-auto" style={{height: '260px'}}>
           {available.length === 0 ? (
             <p className="text-xs text-gray-400 text-center py-6">
               {search ? 'Sin resultados.' : 'No hay instructores disponibles.'}
@@ -139,7 +131,7 @@ function InstructorPanel({
                   <p className="text-sm font-medium group-hover:text-purple-700">
                     {u.firstName} {u.lastName}
                   </p>
-                  <p className="text-xs text-gray-400 font-mono">{u.username}</p>
+                  <p className="text-xs text-gray-400 font-mono">{u.username}{u.cedula ? ` · ${u.cedula}` : ''}</p>
                 </div>
                 <UserPlus className="w-4 h-4 text-gray-300 group-hover:text-purple-500 shrink-0" />
               </button>
@@ -147,24 +139,24 @@ function InstructorPanel({
           )}
         </div>
         {isFull && (
-          <p className="text-xs text-red-500 text-center">Límite de {max} profesores alcanzado.</p>
+          <p className="text-xs text-red-500 text-center flex-shrink-0">Límite de {max} profesores alcanzado.</p>
         )}
         {type === 'practice' && (
-          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
-            🗓 Los horarios de práctica (1 alumno c/2 horas) se configuran en el módulo de Programación.
+          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 flex-shrink-0">
+            🗓 Los horarios de práctica se configuran en el módulo de Programación.
           </p>
         )}
       </div>
 
-      {/* —— Columna derecha: asignados —— */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
+      {/* Columna derecha: asignados */}
+      <div className="flex flex-col gap-2" style={{minHeight: 0}}>
+        <div className="flex items-center justify-between flex-shrink-0">
           <p className="text-sm font-semibold text-gray-700">Asignados al curso</p>
           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
             isFull ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'
           }`}>{list.length}/{max}</span>
         </div>
-        <div className="border rounded-lg max-h-72 overflow-y-auto">
+        <div className="border rounded-lg overflow-y-auto" style={{height: '260px'}}>
           {list.length === 0 ? (
             <p className="text-xs text-gray-400 text-center py-6">Sin profesores asignados.</p>
           ) : (
@@ -189,7 +181,6 @@ function InstructorPanel({
           )}
         </div>
       </div>
-
     </div>
   );
 }
@@ -294,23 +285,162 @@ function CourseForm({ form, setForm, onSubmit, submitting, submitLabel }: {
 }
 
 /* ==========================
+   PANEL PARTICIPANTES (dentro de Editar)
+   Muestra estudiantes e instructores inscritos con opción de removerlos
+========================== */
+function ParticipantsPanel({
+  course, onRefresh,
+}: {
+  course: Course;
+  onRefresh: (c: Course) => void;
+}) {
+  const [removingStudId, setRemovingStudId]  = useState<string | null>(null);
+  const [removingInstrId, setRemovingInstrId] = useState<string | null>(null);
+
+  const reload = async () => {
+    const all = await getCourses();
+    const fresh = all.find((c) => c.id === course.id);
+    if (fresh) onRefresh(fresh);
+  };
+
+  const handleRemoveStudent = async (id: string) => {
+    try {
+      setRemovingStudId(id);
+      await removeStudentFromCourse(course.id, course, id);
+      toast.success('Estudiante removido del curso');
+      await reload();
+    } catch { toast.error('Error al remover estudiante'); }
+    finally { setRemovingStudId(null); }
+  };
+
+  const handleRemoveInstructor = async (id: string, type: 'theory' | 'practice') => {
+    try {
+      setRemovingInstrId(id);
+      await removeInstructorFromCourse(course.id, course, id, type);
+      toast.success('Profesor removido del curso');
+      await reload();
+    } catch { toast.error('Error al remover profesor'); }
+    finally { setRemovingInstrId(null); }
+  };
+
+  const allInstructors = [
+    ...course.theoryInstructors.map((i) => ({ ...i, tipo: 'Teoría' as const, slotType: 'theory' as const })),
+    ...course.practiceInstructors.map((i) => ({ ...i, tipo: 'Práctica' as const, slotType: 'practice' as const })),
+  ];
+
+  return (
+    <div className="space-y-5">
+      {/* Profesores asignados */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+            <UserPlus className="w-4 h-4 text-purple-500" /> Profesores asignados
+          </h4>
+          <span className="text-xs text-gray-400">
+            {allInstructors.length} profesor{allInstructors.length !== 1 ? 'es' : ''}
+          </span>
+        </div>
+        <div className="border rounded-lg overflow-hidden">
+          {allInstructors.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center py-5">No hay profesores asignados.</p>
+          ) : (
+            allInstructors.map((ins) => (
+              <div key={`${ins.slotType}-${ins.id}`}
+                className="flex items-center justify-between px-3 py-2.5 border-b last:border-b-0 hover:bg-gray-50">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">{ins.name}</p>
+                    <p className="text-xs text-gray-400 font-mono">{ins.username}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    {ins.tipo}
+                  </Badge>
+                  <Button size="sm" variant="ghost"
+                    onClick={() => handleRemoveInstructor(ins.id, ins.slotType)}
+                    disabled={removingInstrId === ins.id}
+                    className="text-red-500 hover:text-red-700 h-7 w-7 p-0"
+                    title="Remover del curso">
+                    <X className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Estudiantes inscritos */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+            <Users className="w-4 h-4 text-green-500" /> Estudiantes inscritos
+          </h4>
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+            course.students.length >= course.capacity
+              ? 'bg-red-100 text-red-600'
+              : 'bg-gray-100 text-gray-500'
+          }`}>
+            {course.students.length}/{course.capacity}
+          </span>
+        </div>
+        <div className="border rounded-lg h-64 overflow-y-auto">
+          {course.students.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center py-5">No hay estudiantes inscritos.</p>
+          ) : (
+            course.students.map((s) => (
+              <div key={s.id}
+                className="flex items-center justify-between px-3 py-2.5 border-b last:border-b-0 hover:bg-gray-50">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">{s.name}</p>
+                    <p className="text-xs text-gray-400 font-mono">{s.username}</p>
+                  </div>
+                </div>
+                <Button size="sm" variant="ghost"
+                  onClick={() => handleRemoveStudent(s.id)}
+                  disabled={removingStudId === s.id}
+                  className="text-red-500 hover:text-red-700 h-7 w-7 p-0"
+                  title="Remover del curso">
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ==========================
    COMPONENTE PRINCIPAL
 ========================== */
 export function CourseManagement() {
-  const [courses, setCourses]           = useState<Course[]>([]);
-  const [loading, setLoading]           = useState(true);
+  const [courses, setCourses]               = useState<Course[]>([]);
+  const [loading, setLoading]               = useState(true);
   const [allInstructors, setAllInstructors] = useState<User[]>([]);
   const [allStudents, setAllStudents]       = useState<User[]>([]);
 
+  // Crear
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [createForm, setCreateForm]     = useState<CourseInput>(emptyForm);
   const [creating, setCreating]         = useState(false);
 
+  // Editar (con tabs: Datos | Participantes)
   const [isEditOpen, setIsEditOpen]       = useState(false);
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [editForm, setEditForm]           = useState<CourseInput>(emptyForm);
   const [saving, setSaving]               = useState(false);
+  const [editTab, setEditTab]             = useState<'datos' | 'participantes'>('datos');
 
+  // Botón "Registrar en curso": rastrea qué fila tiene el menú abierto
+  const [enrollMenuId, setEnrollMenuId] = useState<string | null>(null);
+
+  // Diálogos de profesores / estudiantes
   const [isInstructorsOpen, setIsInstructorsOpen] = useState(false);
   const [instrCourse, setInstrCourse]             = useState<Course | null>(null);
 
@@ -353,7 +483,7 @@ export function CourseManagement() {
       setIsCreateOpen(false);
       setCreateForm(emptyForm);
       refreshCourses();
-    } catch { toast.error('Error al crear curso'); }
+    } catch (err: any) { toast.error(err.message || 'Error al crear curso'); }
     finally { setCreating(false); }
   };
 
@@ -366,6 +496,7 @@ export function CourseManagement() {
       modality: c.modality ?? 'normal',
       capacity: c.capacity, status: c.status,
     });
+    setEditTab('datos');
     setIsEditOpen(true);
   };
 
@@ -378,7 +509,7 @@ export function CourseManagement() {
       toast.success('Curso actualizado');
       setIsEditOpen(false);
       refreshCourses();
-    } catch { toast.error('Error al actualizar'); }
+    } catch (err: any) { toast.error(err.message || 'Error al actualizar'); }
     finally { setSaving(false); }
   };
 
@@ -389,19 +520,15 @@ export function CourseManagement() {
     catch { toast.error('Error al eliminar'); }
   };
 
-  /* ---- Estudiantes disponibles para el curso abierto ---- */
+  /* ---- Estudiantes disponibles para inscribir ---- */
   const availableStudents = useMemo(() => {
     if (!studCourse) return [];
     const enrolledIds = new Set(studCourse.students.map((s) => s.id));
-    const term = studentSearch.toLowerCase();
+    const term = studentSearch.toLowerCase().trim();
     return allStudents.filter((u) => {
       if (enrolledIds.has(u.id)) return false;
       if (!term) return true;
-      return (
-        `${u.firstName} ${u.lastName}`.toLowerCase().includes(term) ||
-        u.username.toLowerCase().includes(term) ||
-        u.email.toLowerCase().includes(term)
-      );
+      return u.username.toLowerCase().includes(term);
     });
   }, [allStudents, studCourse, studentSearch]);
 
@@ -418,7 +545,7 @@ export function CourseManagement() {
     finally { setAddingStudId(null); }
   };
 
-  /* ---- Remover estudiante ---- */
+  /* ---- Remover estudiante (desde el diálogo de estudiantes) ---- */
   const handleRemoveStudent = async (studentId: string) => {
     if (!studCourse) return;
     try {
@@ -435,7 +562,7 @@ export function CourseManagement() {
      RENDER
   ========================== */
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" onClick={() => enrollMenuId && setEnrollMenuId(null)}>
 
       {/* Encabezado */}
       <div className="flex justify-between items-center">
@@ -492,6 +619,7 @@ export function CourseManagement() {
                 <TableBody>
                   {courses.map((c) => {
                     const sch = THEORY_SCHEDULES.find((s) => s.value === c.theorySchedule);
+                    const menuOpen = enrollMenuId === c.id;
                     return (
                       <TableRow key={c.id}>
                         <TableCell className="font-mono text-xs text-purple-700 font-semibold">
@@ -508,7 +636,6 @@ export function CourseManagement() {
                         </TableCell>
                         <TableCell className="text-xs">{getModalityLabel(c.modality) || '—'}</TableCell>
 
-                        {/* Prof. Teoría — solo nombres */}
                         <TableCell>
                           {c.theoryInstructors.length === 0
                             ? <span className="text-xs text-gray-400 italic">—</span>
@@ -524,7 +651,6 @@ export function CourseManagement() {
                             )}
                         </TableCell>
 
-                        {/* Prof. Práctica — solo nombres, sin slots */}
                         <TableCell>
                           {c.practiceInstructors.length === 0
                             ? <span className="text-xs text-gray-400 italic">—</span>
@@ -547,30 +673,60 @@ export function CourseManagement() {
                           </div>
                         </TableCell>
                         <TableCell><StatusBadge status={c.status} /></TableCell>
+
+                        {/* ===== ACCIONES ===== */}
                         <TableCell>
                           <div className="flex items-center gap-1">
+
+                            {/* Botón Editar */}
                             <Button size="sm" variant="ghost" onClick={() => handleOpenEdit(c)}
                               className="text-blue-600 hover:text-blue-700" title="Editar curso">
                               <Pencil className="w-4 h-4" />
                             </Button>
+
+                            {/* ── Botón "Registrar en curso" con menú desplegable ── */}
                             {c.status === 'activo' && (
-                              <>
-                                <Button size="sm" variant="ghost"
-                                  onClick={() => { setInstrCourse(c); setIsInstructorsOpen(true); }}
-                                  className="text-purple-600 hover:text-purple-700" title="Gestionar profesores">
+                              <div className="relative" onClick={(e) => e.stopPropagation()}>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setEnrollMenuId(menuOpen ? null : c.id)}
+                                  className="text-purple-600 hover:text-purple-700 gap-1"
+                                  title="Registrar en curso">
                                   <UserPlus className="w-4 h-4" />
+                                  <ChevronDown className={`w-3 h-3 transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
                                 </Button>
-                                <Button size="sm" variant="ghost"
-                                  onClick={() => {
-                                    setStudCourse(c);
-                                    setStudentSearch('');
-                                    setIsStudentsOpen(true);
-                                  }}
-                                  className="text-green-600 hover:text-green-700" title="Gestionar estudiantes">
-                                  <Users className="w-4 h-4" />
-                                </Button>
-                              </>
+
+                                {/* Menú desplegable */}
+                                {menuOpen && (
+                                  <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[170px]">
+                                    <button
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-green-50 hover:text-green-700 transition-colors text-left"
+                                      onClick={() => {
+                                        setStudCourse(c);
+                                        setStudentSearch('');
+                                        setIsStudentsOpen(true);
+                                        setEnrollMenuId(null);
+                                      }}>
+                                      <Users className="w-4 h-4" />
+                                      Registrar Estudiantes
+                                    </button>
+                                    <button
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-purple-50 hover:text-purple-700 transition-colors text-left"
+                                      onClick={() => {
+                                        setInstrCourse(c);
+                                        setIsInstructorsOpen(true);
+                                        setEnrollMenuId(null);
+                                      }}>
+                                      <UserPlus className="w-4 h-4" />
+                                      Registrar Profesores
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             )}
+
+                            {/* Botón Eliminar */}
                             <Button size="sm" variant="ghost" onClick={() => handleDelete(c.id)}
                               className="text-red-600 hover:text-red-700" title="Eliminar curso">
                               <Trash2 className="w-4 h-4" />
@@ -587,18 +743,49 @@ export function CourseManagement() {
         </CardContent>
       </Card>
 
-      {/* ===== Dialog EDITAR ===== */}
+      {/* ===== Dialog EDITAR (con tabs Datos / Participantes) ===== */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Editar Curso</DialogTitle></DialogHeader>
-          <CourseForm form={editForm} setForm={setEditForm}
-            onSubmit={handleSaveEdit} submitting={saving} submitLabel="Guardar Cambios" />
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Editar Curso — Clase {editingCourse?.name}{' '}
+              <span className="font-mono text-purple-600 text-sm">{editingCourse?.code}</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <Tabs value={editTab} onValueChange={(v) => setEditTab(v as 'datos' | 'participantes')}>
+            <TabsList className="w-full mb-4">
+              <TabsTrigger value="datos" className="flex-1">Datos del curso</TabsTrigger>
+              <TabsTrigger value="participantes" className="flex-1">
+                Participantes{editingCourse
+                  ? ` (${editingCourse.theoryInstructors.length + editingCourse.practiceInstructors.length + editingCourse.students.length})`
+                  : ''}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="datos">
+              <CourseForm form={editForm} setForm={setEditForm}
+                onSubmit={handleSaveEdit} submitting={saving} submitLabel="Guardar Cambios" />
+            </TabsContent>
+
+            <TabsContent value="participantes">
+              {editingCourse && (
+                <ParticipantsPanel
+                  course={editingCourse}
+                  onRefresh={(c) => {
+                    setEditingCourse(c);
+                    setCourses((p) => p.map((x) => x.id === c.id ? c : x));
+                  }}
+                />
+              )}
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
       {/* ===== Dialog PROFESORES ===== */}
       <Dialog open={isInstructorsOpen} onOpenChange={setIsInstructorsOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>
               Profesores — Clase {instrCourse?.name}{' '}
@@ -646,7 +833,7 @@ export function CourseManagement() {
 
       {/* ===== Dialog ESTUDIANTES ===== */}
       <Dialog open={isStudentsOpen} onOpenChange={setIsStudentsOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>
               Estudiantes — Clase {studCourse?.name}{' '}
@@ -658,20 +845,20 @@ export function CourseManagement() {
             <div className="grid grid-cols-2 gap-4">
 
               {/* Columna izquierda: disponibles */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-gray-700">Estudiantes registrados</p>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between flex-shrink-0">
+                  <p className="text-sm font-semibold text-gray-700">Estudiantes disponibles</p>
                   <span className="text-xs text-gray-400">{availableStudents.length} disponibles</span>
                 </div>
-                <div className="relative">
+                <div className="relative flex-shrink-0">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                   <Input value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)}
-                    placeholder="Buscar estudiante..." className="pl-8 h-8 text-sm" />
+                    placeholder="Buscar por código..." className="pl-8 h-8 text-sm" />
                 </div>
-                <div className="border rounded-lg max-h-72 overflow-y-auto">
+                <div className="border rounded-lg overflow-y-auto" style={{height: '260px'}}>
                   {availableStudents.length === 0 ? (
                     <p className="text-xs text-gray-400 text-center py-6">
-                      {studentSearch ? 'Sin resultados.' : 'Todos los estudiantes ya están inscritos.'}
+                      {studentSearch ? `Sin resultados para "${studentSearch}".` : 'Todos los estudiantes ya están inscritos.'}
                     </p>
                   ) : (
                     availableStudents.map((u) => (
@@ -686,7 +873,9 @@ export function CourseManagement() {
                           <p className="text-sm font-medium group-hover:text-green-700">
                             {u.firstName} {u.lastName}
                           </p>
-                          <p className="text-xs text-gray-400 font-mono">{u.username}</p>
+                          <p className="text-xs text-gray-400 font-mono">
+                            {u.username}{u.cedula ? ` · ${u.cedula}` : ''}
+                          </p>
                         </div>
                         <UserPlus className="w-4 h-4 text-gray-300 group-hover:text-green-500 shrink-0" />
                       </button>
@@ -694,15 +883,15 @@ export function CourseManagement() {
                   )}
                 </div>
                 {studCourse.students.length >= studCourse.capacity && (
-                  <p className="text-xs text-red-500 text-center">
+                  <p className="text-xs text-red-500 text-center flex-shrink-0">
                     Curso lleno ({studCourse.capacity}/{studCourse.capacity})
                   </p>
                 )}
               </div>
 
               {/* Columna derecha: inscritos */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between flex-shrink-0">
                   <p className="text-sm font-semibold text-gray-700">Inscritos en el curso</p>
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                     studCourse.students.length >= studCourse.capacity
@@ -712,7 +901,7 @@ export function CourseManagement() {
                     {studCourse.students.length}/{studCourse.capacity}
                   </span>
                 </div>
-                <div className="border rounded-lg max-h-80 overflow-y-auto">
+                <div className="border rounded-lg overflow-y-auto" style={{height: '260px'}}>
                   {studCourse.students.length === 0 ? (
                     <p className="text-xs text-gray-400 text-center py-6">Sin estudiantes inscritos.</p>
                   ) : (
