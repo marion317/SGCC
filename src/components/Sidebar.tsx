@@ -1,4 +1,6 @@
-import { Home, Users, BookOpen, Calendar, FileText, FileSpreadsheet, LogOut } from 'lucide-react';
+// src/components/Sidebar.tsx
+// MODIFICADO: Se activaron "Generar Reportes" y "Notificaciones" como funcionales
+import { Home, Users, BookOpen, Calendar, FileSpreadsheet, Bell, ShieldAlert, LogOut } from 'lucide-react';
 
 const roleLabels: Record<string, string> = {
   admin: 'Admin',
@@ -18,13 +20,15 @@ interface SidebarProps {
 export function Sidebar({ currentView, onNavigate, onLogout, userName, userEmail, userRole }: SidebarProps) {
   const roleLabel = userRole ? roleLabels[userRole] : 'Admin';
 
+  /* Menú de navegación admin */
   const menuItems = [
-    { id: 'inicio',    label: 'Inicio',              icon: Home,            functional: true  },
-    { id: 'usuarios',  label: 'Gestión de Usuarios', icon: Users,           functional: true  },
-    { id: 'cursos',    label: 'Gestión de Cursos',   icon: BookOpen,        functional: true  },
-    { id: 'horarios',  label: 'Horarios',            icon: Calendar,        functional: true  },
-    { id: 'historial', label: 'Historial Académico', icon: FileText,        functional: false },
-    { id: 'reportes',  label: 'Generar Reportes',    icon: FileSpreadsheet, functional: false },
+    { id: 'inicio',          label: 'Inicio',               icon: Home,            functional: true  },
+    { id: 'usuarios',        label: 'Gestión de Usuarios',  icon: Users,           functional: true  },
+    { id: 'cursos',          label: 'Gestión de Cursos',    icon: BookOpen,        functional: true  },
+    { id: 'horarios',        label: 'Horarios',             icon: Calendar,        functional: true  },
+    { id: 'reportes',        label: 'Generar Reportes',     icon: FileSpreadsheet, functional: true  }, // ← activado
+    { id: 'notificaciones',  label: 'Notificaciones',       icon: Bell,            functional: true  }, // ← nuevo
+    { id: 'auditoria',       label: 'Auditoría',            icon: ShieldAlert,     functional: true  },
   ];
 
   return (

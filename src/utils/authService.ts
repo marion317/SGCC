@@ -16,6 +16,7 @@ import {
   where,
   Timestamp,
 } from "firebase/firestore";
+import { createAuditLog, getCurrentAuditActor } from "./auditService";
 
 /* ==========================
    INTERFACES
@@ -92,6 +93,7 @@ export const isUsernameAvailable = async (
    REGISTRAR ADMIN
 ========================== */
 export const registerAdmin = async (data: RegisterData) => {
+  const actor = getCurrentAuditActor();
   const { email, password, username, firstName, lastName } = data;
   if (!(await isUsernameAvailable(username)))
     throw new Error("El código de usuario ya está en uso");
@@ -103,6 +105,12 @@ export const registerAdmin = async (data: RegisterData) => {
     role: "admin",
     createdAt: Timestamp.now(),
   });
+  void createAuditLog({
+    action: "create_user_admin",
+    module: "users",
+    details: `Se creó admin ${firstName} ${lastName} (${email})`,
+    actorOverride: actor,
+  }).catch(() => {});
   return { success: true };
 };
 
@@ -110,6 +118,7 @@ export const registerAdmin = async (data: RegisterData) => {
    REGISTRAR INSTRUCTOR
 ========================== */
 export const registerInstructor = async (data: RegisterData) => {
+  const actor = getCurrentAuditActor();
   const { email, password, username, firstName, lastName } = data;
   if (!(await isUsernameAvailable(username)))
     throw new Error("El código de usuario ya está en uso");
@@ -121,6 +130,12 @@ export const registerInstructor = async (data: RegisterData) => {
     role: "instructor",
     createdAt: Timestamp.now(),
   });
+  void createAuditLog({
+    action: "create_user_instructor",
+    module: "users",
+    details: `Se creó instructor ${firstName} ${lastName} (${email})`,
+    actorOverride: actor,
+  }).catch(() => {});
   return { success: true };
 };
 
@@ -128,6 +143,7 @@ export const registerInstructor = async (data: RegisterData) => {
    REGISTRAR ESTUDIANTE
 ========================== */
 export const registerStudent = async (data: RegisterData) => {
+  const actor = getCurrentAuditActor();
   const {
     email, password, username, firstName, lastName,
     cedula, telefono, direccion, fechaNacimiento, genero,
@@ -147,6 +163,12 @@ export const registerStudent = async (data: RegisterData) => {
     role: "student",
     createdAt: Timestamp.now(),
   });
+  void createAuditLog({
+    action: "create_user_student",
+    module: "users",
+    details: `Se creó estudiante ${firstName} ${lastName} (${email})`,
+    actorOverride: actor,
+  }).catch(() => {});
   return { success: true, password };
 };
 
@@ -157,17 +179,31 @@ export const changeUserRole = async (
   id: string,
   newRole: "student" | "admin" | "instructor"
 ): Promise<void> => {
+  const actor = getCurrentAuditActor();
   await updateDoc(doc(db, "users", id), {
     role: newRole,
     updatedAt: Timestamp.now(),
   });
+  void createAuditLog({
+    action: "change_user_role",
+    module: "roles",
+    details: `Cambio de rol del usuario ${id} a ${newRole}`,
+    actorOverride: actor,
+  }).catch(() => {});
 };
 
 /* ==========================
    ELIMINAR USUARIO
 ========================== */
 export const deleteUser = async (id: string) => {
+  const actor = getCurrentAuditActor();
   await deleteDoc(doc(db, "users", id));
+  void createAuditLog({
+    action: "delete_user",
+    module: "users",
+    details: `Eliminación de usuario ${id}`,
+    actorOverride: actor,
+  }).catch(() => {});
   return { success: true };
 };
 

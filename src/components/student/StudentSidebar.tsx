@@ -1,4 +1,16 @@
-import { Home, BookOpen, MessageSquare, FileText, Calendar, ClipboardList, HelpCircle, User, LogOut } from 'lucide-react';
+// StudentSidebar.tsx  ← MODIFICADO
+// Añade 'evaluaciones' como ítem funcional en el menú del estudiante
+
+import {
+  Home,
+  BookOpen,
+  Calendar,
+  ClipboardList,
+  User,
+  LogOut,
+  GraduationCap,
+  ClipboardCheck, // ← icono para evaluaciones
+} from 'lucide-react';
 
 interface StudentSidebarProps {
   currentView: string;
@@ -8,16 +20,21 @@ interface StudentSidebarProps {
   userEmail?: string;
 }
 
-export function StudentSidebar({ currentView, onNavigate, onLogout, userName, userEmail }: StudentSidebarProps) {
+export function StudentSidebar({
+  currentView,
+  onNavigate,
+  onLogout,
+  userName,
+  userEmail,
+}: StudentSidebarProps) {
   const menuItems = [
-    { id: 'inicio',      label: 'Inicio',             icon: Home,          functional: true  },
-    { id: 'clases',      label: 'Mis Clases',          icon: BookOpen,      functional: true  },
-    { id: 'horario',     label: 'Mi Horario',          icon: Calendar,      functional: true  },
-    { id: 'asistencia',  label: 'Mi Asistencia',       icon: ClipboardList, functional: true  },
-    { id: 'observaciones',label: 'Observaciones',      icon: MessageSquare, functional: false },
-    { id: 'historial',   label: 'Historial Académico', icon: FileText,      functional: false },
-    { id: 'soporte',     label: 'Soporte/Ayuda',       icon: HelpCircle,    functional: false },
-    { id: 'perfil',      label: 'Mi Perfil',           icon: User,          functional: true  },
+    { id: 'inicio',        label: 'Inicio',             icon: Home,           functional: true  },
+    { id: 'clases',        label: 'Mis Clases',          icon: BookOpen,       functional: true  },
+    { id: 'horario',       label: 'Mi Horario',          icon: Calendar,       functional: true  },
+    { id: 'asistencia',    label: 'Mi Asistencia',       icon: ClipboardList,  functional: true  },
+    { id: 'evaluaciones',  label: 'Mis Evaluaciones',    icon: ClipboardCheck, functional: true  }, // ← NUEVO
+    { id: 'graduacion',    label: 'Graduación',          icon: GraduationCap,  functional: true  },
+    { id: 'perfil',        label: 'Mi Perfil',           icon: User,           functional: true  },
   ];
 
   return (
@@ -39,18 +56,23 @@ export function StudentSidebar({ currentView, onNavigate, onLogout, userName, us
           const Icon = item.icon;
           const isActive = currentView === item.id;
           return (
-            <button key={item.id} type="button"
-              onClick={() => item.functional ? onNavigate(item.id) : undefined}
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => (item.functional ? onNavigate(item.id) : undefined)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${
                 isActive
                   ? 'bg-purple-600 text-white'
                   : item.functional
-                    ? 'text-gray-300 hover:bg-gray-800'
-                    : 'text-gray-600 cursor-not-allowed'
-              }`}>
+                  ? 'text-gray-300 hover:bg-gray-800'
+                  : 'text-gray-600 cursor-not-allowed'
+              }`}
+            >
               <Icon className="w-5 h-5" />
               <span>{item.label}</span>
-              {!item.functional && <span className="ml-auto text-xs text-gray-600">Pronto</span>}
+              {!item.functional && (
+                <span className="ml-auto text-xs text-gray-600">Pronto</span>
+              )}
             </button>
           );
         })}
@@ -59,15 +81,24 @@ export function StudentSidebar({ currentView, onNavigate, onLogout, userName, us
       <div className="p-4 border-t border-gray-800">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-sm font-bold">
-            {userName ? userName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'U'}
+            {userName
+              ? userName
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase()
+              : 'U'}
           </div>
           <div>
             <p className="text-sm">{userName || 'Usuario'}</p>
             <p className="text-xs text-gray-400">{userEmail || ''}</p>
           </div>
         </div>
-        <button onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors">
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors"
+        >
           <LogOut className="w-5 h-5" />
           <span>Cerrar Sesión</span>
         </button>

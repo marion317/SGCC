@@ -1,4 +1,14 @@
-import { Home, Calendar, BookOpen, ClipboardCheck, FileText, MessageSquare, BarChart3, HelpCircle, LogOut } from 'lucide-react';
+// InstructorSidebar.tsx  ← MODIFICADO
+// 'evaluaciones' ahora es funcional (functional: true)
+
+import {
+  Home,
+  Calendar,
+  BookOpen,
+  ClipboardCheck,
+  FileText,
+  LogOut,
+} from 'lucide-react';
 
 interface InstructorSidebarProps {
   currentView: string;
@@ -8,15 +18,19 @@ interface InstructorSidebarProps {
   userEmail?: string;
 }
 
-export function InstructorSidebar({ currentView, onNavigate, onLogout, userName, userEmail }: InstructorSidebarProps) {
+export function InstructorSidebar({
+  currentView,
+  onNavigate,
+  onLogout,
+  userName,
+  userEmail,
+}: InstructorSidebarProps) {
   const menuItems = [
-    { id: 'inicio',       label: 'Inicio',              icon: Home,           functional: true  },
-    { id: 'horario',      label: 'Mi Horario',          icon: Calendar,       functional: true  },
-    { id: 'clases',       label: 'Mis Clases',          icon: BookOpen,       functional: false },
-    { id: 'asistencia',   label: 'Registrar Asistencia',icon: ClipboardCheck, functional: true  },
-    { id: 'evaluaciones', label: 'Evaluaciones',        icon: FileText,       functional: false },
-    { id: 'observaciones',label: 'Observaciones',       icon: MessageSquare,  functional: false },
-    { id: 'reportes',     label: 'Reportes',            icon: BarChart3,      functional: false },
+    { id: 'inicio',        label: 'Inicio',               icon: Home,           functional: true  },
+    { id: 'horario',       label: 'Mi Horario',           icon: Calendar,       functional: true  },
+    { id: 'clases',        label: 'Mis Clases',           icon: BookOpen,       functional: true  },
+    { id: 'asistencia',    label: 'Registrar Asistencia', icon: ClipboardCheck, functional: true  },
+    { id: 'evaluaciones',  label: 'Evaluaciones',         icon: FileText,       functional: true  }, // ← ACTIVADO
   ];
 
   return (
@@ -31,32 +45,50 @@ export function InstructorSidebar({ currentView, onNavigate, onLogout, userName,
           const Icon = item.icon;
           const isActive = currentView === item.id;
           return (
-            <button key={item.id} type="button"
-              onClick={() => item.functional ? onNavigate(item.id) : undefined}
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => (item.functional ? onNavigate(item.id) : undefined)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors ${
                 isActive
                   ? 'bg-purple-600 text-white'
                   : item.functional
-                    ? 'text-gray-300 hover:bg-gray-800'
-                    : 'text-gray-600 cursor-not-allowed'
-              }`}>
+                  ? 'text-gray-300 hover:bg-gray-800'
+                  : 'text-gray-600 cursor-not-allowed'
+              }`}
+            >
               <Icon className="w-5 h-5" />
               <span>{item.label}</span>
-              {!item.functional && <span className="ml-auto text-xs text-gray-600">Pronto</span>}
+              {!item.functional && (
+                <span className="ml-auto text-xs text-gray-600">Pronto</span>
+              )}
             </button>
           );
         })}
       </nav>
 
       <div className="p-4 border-t border-gray-800">
-        <button type="button"
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors text-gray-600 cursor-not-allowed">
-          <HelpCircle className="w-5 h-5" />
-          <span>Soporte / Ayuda</span>
-          <span className="ml-auto text-xs text-gray-600">Pronto</span>
-        </button>
-        <button onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center text-sm font-bold">
+            {userName
+              ? userName
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase()
+              : "I"}
+          </div>
+          <div>
+            <p className="text-sm">{userName || "Usuario"}</p>
+            <p className="text-xs text-gray-400">{userEmail || ""}</p>
+          </div>
+        </div>
+
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-gray-800 transition-colors"
+        >
           <LogOut className="w-5 h-5" />
           <span>Cerrar Sesión</span>
         </button>

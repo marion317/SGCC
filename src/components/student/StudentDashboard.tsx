@@ -1,11 +1,15 @@
+// src/components/student/StudentDashboard.tsx
+// MODIFICADO: Se pasa userId a StudentHeader para que funcione NotificationBell
 import { useState } from 'react';
-import { StudentSidebar } from './StudentSidebar';
-import { StudentHeader } from './StudentHeader';
-import { StudentHome } from './StudentHome';
-import { StudentProfile } from './StudentProfile';
-import { StudentClasses } from './Studentclasses';
-import { StudentSchedule } from './StudentSchedule';
+import { StudentSidebar }    from './StudentSidebar';
+import { StudentHeader }     from './StudentHeader';
+import { StudentHome }       from './StudentHome';
+import { StudentProfile }    from './StudentProfile';
+import { StudentClasses }    from './Studentclasses';
+import { StudentSchedule }   from './StudentSchedule';
 import { StudentAttendance } from './StudentAttendance';
+import { StudentGraduation } from './StudentGraduation';
+import { StudentExams }      from './StudentExams';
 
 interface StudentDashboardProps {
   onLogout: () => void;
@@ -14,7 +18,12 @@ interface StudentDashboardProps {
   userId: string;
 }
 
-export function StudentDashboard({ onLogout, userDisplayName, userEmail, userId }: StudentDashboardProps) {
+export function StudentDashboard({
+  onLogout,
+  userDisplayName,
+  userEmail,
+  userId,
+}: StudentDashboardProps) {
   const [currentView, setCurrentView] = useState('inicio');
 
   return (
@@ -27,14 +36,32 @@ export function StudentDashboard({ onLogout, userDisplayName, userEmail, userId 
         userEmail={userEmail}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <StudentHeader userName={userDisplayName} userRole="student" />
+        {/* ── ANTES: <StudentHeader userName={userDisplayName} userRole="student" />
+            ── DESPUÉS: se agrega userId para NotificationBell ── */}
+        <StudentHeader
+          userName={userDisplayName}
+          userRole="student"
+          userId={userId}
+        />
         <main className="flex-1 overflow-y-auto p-6">
-          {currentView === 'inicio'     && <StudentHome userName={userDisplayName} />}
-          {currentView === 'clases'     && <StudentClasses userId={userId} />}
-          {currentView === 'horario'    && <StudentSchedule userId={userId} userName={userDisplayName} />}
-          {currentView === 'asistencia' && <StudentAttendance userId={userId} />}
-          {currentView === 'perfil'     && (
-            <StudentProfile userId={userId} userName={userDisplayName} userEmail={userEmail} />
+          {currentView === 'inicio'       && <StudentHome       userName={userDisplayName} />}
+          {currentView === 'clases'       && <StudentClasses    userId={userId} />}
+          {currentView === 'horario'      && <StudentSchedule   userId={userId} userName={userDisplayName} />}
+          {currentView === 'asistencia'   && <StudentAttendance userId={userId} />}
+          {currentView === 'graduacion'   && (
+            <StudentGraduation
+              userId={userId}
+              userName={userDisplayName}
+              userEmail={userEmail}
+            />
+          )}
+          {currentView === 'evaluaciones' && <StudentExams userId={userId} />}
+          {currentView === 'perfil'       && (
+            <StudentProfile
+              userId={userId}
+              userName={userDisplayName}
+              userEmail={userEmail}
+            />
           )}
         </main>
       </div>

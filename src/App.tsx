@@ -1,3 +1,6 @@
+// src/App.tsx
+// MODIFICADO: Se añadieron las vistas "reportes" y "notificaciones",
+// y se pasa userId al Header para el sistema de notificaciones
 import { useState, useEffect } from "react";
 import { Toaster } from "sonner";
 import { Sidebar } from "./components/Sidebar";
@@ -9,9 +12,17 @@ import { ForgotPassword } from "./components/ForgotPassword";
 import { UserManagement } from "./components/UserManagement";
 import { CourseManagement } from "./components/CourseManagement";
 import { ScheduleManagement } from "./components/ScheduleManagement";
+import { StudentReport } from "./components/StudentReport";             // ← NUEVO
+import { NotificationManager } from "./components/NotificationManager"; // ← NUEVO
+import { AuditLogs } from "./components/AuditLogs";
 import { StudentDashboard } from "./components/student/StudentDashboard";
 import { InstructorDashboard } from "./components/instructor/InstructorDashboard";
 import { initDatabase } from "./utils/initDatabase";
+import {
+  clearAuditActorContext,
+  createAuditLog,
+  setAuditActorContext,
+} from "./utils/auditService";
 
 type AppProps = {
   allowAdmin: boolean;
@@ -36,6 +47,18 @@ export default function App({ allowAdmin }: AppProps) {
     displayName: string,
     email: string
   ) => {
+    setAuditActorContext({
+      id,
+      email,
+      role,
+      displayName,
+    });
+    void createAuditLog({
+      action: "login",
+      module: "auth",
+      details: `Inicio de sesión (${role})`,
+      actorOverride: { id, email, role, displayName },
+    }).catch(() => {});
     setIsAuthenticated(true);
     setUserRole(role);
     setUserId(id);
@@ -45,6 +68,12 @@ export default function App({ allowAdmin }: AppProps) {
   };
 
   const handleLogout = () => {
+    void createAuditLog({
+      action: "logout",
+      module: "auth",
+      details: "Cierre de sesión",
+    }).catch(() => {});
+    clearAuditActorContext();
     setIsAuthenticated(false);
     setAuthView("login");
     setCurrentView("inicio");
@@ -138,12 +167,23 @@ export default function App({ allowAdmin }: AppProps) {
           userRole={userRole}
         />
         <div className="flex-1 flex flex-col overflow-hidden">
-          <Header userName={userDisplayName} userRole={userRole} />
+          {/* ── ANTES ────────────────────────────────────────────────────
+            <Header userName={userDisplayName} userRole={userRole} />
+          ── DESPUÉS ──────────────────────────────────────────────────── */}
+          <Header
+            userName={userDisplayName}
+            userRole={userRole}
+            userId={userId}          // ← prop nuevo para NotificationBell
+          />
           <main className="flex-1 overflow-y-auto p-6">
-            {currentView === "inicio"   && <Dashboard userName={userDisplayName} />}
-            {currentView === "usuarios" && <UserManagement />}
-            {currentView === "cursos"   && <CourseManagement />}
-            {currentView === "horarios" && <ScheduleManagement />}
+            {currentView === "inicio"         && <Dashboard userName={userDisplayName} />}
+            {currentView === "usuarios"       && <UserManagement />}
+            {currentView === "cursos"         && <CourseManagement />}
+            {currentView === "horarios"       && <ScheduleManagement />}
+            {/* ── NUEVO ── */}
+            {currentView === "reportes"       && <StudentReport />}
+            {currentView === "notificaciones" && <NotificationManager currentUserId={userId} />}
+            {currentView === "auditoria"      && <AuditLogs userRole={userRole} />}
           </main>
         </div>
       </div>

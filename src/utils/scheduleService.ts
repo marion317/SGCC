@@ -5,6 +5,7 @@ import {
   doc, query, where, Timestamp,
 } from "firebase/firestore";
 import { getCoursesByStudentId, getCoursesByInstructorId } from "./courseService";
+import { getCourses } from "./courseService";
 
 /* ==========================
    INTERFACES
@@ -51,6 +52,39 @@ export interface AttendanceSummary {
    SESIONES — CRUD
 ========================== */
 export const createSession = async (data: SessionInput): Promise<void> => {
+  if (data.type === "practica") {
+    const allCourses = await getCourses();
+    const course = allCourses.find((c) => c.id === data.courseId);
+    if (!course) throw new Error("Curso no encontrado para la sesión práctica.");
+
+    if (!course.practiceInstructors || course.practiceInstructors.length !== 1) {
+      throw new Error("Para crear sesión práctica se requiere un único profesor de práctica asignado al curso.");
+    }
+
+    if (!course.practiceInstructors[0].practiceSlots || course.practiceInstructors[0].practiceSlots.length === 0) {
+      throw new Error("El profesor de práctica no tiene horarios (practiceSlots) asignados.");
+    }
+
+    const start = (data.startTime || "").trim();
+    const end = (data.endTime || "").trim();
+    const allowed = course.practiceInstructors[0].practiceSlots;
+    const slotMatch = allowed.find((slot) => {
+      const parts = slot.split("-");
+      if (parts.length < 2) return false;
+      const slotStart = parts[0].trim();
+      const slotEnd = parts[1].trim();
+      return slotStart === start && slotEnd === end;
+    });
+
+    if (!slotMatch) {
+      throw new Error("El horario de la sesión práctica no coincide con el practiceSlot asignado al profesor.");
+    }
+
+    if (!course.students || course.students.length !== 1) {
+      throw new Error("La clase práctica debe tener exactamente un estudiante inscrito.");
+    }
+  }
+
   await addDoc(collection(db, "classSessions"), {
     ...data,
     createdAt: Timestamp.now(),

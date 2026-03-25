@@ -4,6 +4,7 @@ import {
   collection, getDocs, addDoc, updateDoc,
   deleteDoc, doc, Timestamp, query, where,
 } from "firebase/firestore";
+import { createAuditLog, getCurrentAuditActor } from "./auditService";
 
 /* ==========================
    CONSTANTES
@@ -130,15 +131,70 @@ const generateCourseCode = async (): Promise<string> => {
    VALIDAR NOMBRE ÚNICO
 ========================== */
 const assertUniqueName = async (name: string, excludeId?: string): Promise<void> => {
+  const normalize = (s: string) => s.trim().toLowerCase();
+  const target = normalize(name);
   const snap = await getDocs(collection(db, "courses"));
   const duplicate = snap.docs.find((d) => {
     if (excludeId && d.id === excludeId) return false;
-    return (d.data().name as string) === name;
+    const existing = d.data().name as string;
+    return normalize(existing) === target;
   });
   if (duplicate) throw new Error(`Ya existe un curso con el nombre "${name}". Elige otro nombre.`);
 };
 
+/**
+ * Evita que una persona quede en dos grupos con el mismo horario teórico.
+ */
+const assertNoScheduleConflict = async (
+  personId: string,
+  personRole: "student" | "instructor",
+  targetCourse: Course
+): Promise<void> => {
+  const all = await getCourses();
+  const collisions = all.filter((c) => {
+    if (c.id === targetCourse.id) return false;
+    if (c.theorySchedule !== targetCourse.theorySchedule) return false;
+    if (personRole === "student") {
+      return c.students.some((s) => s.id === personId);
+    }
+    return (
+      c.theoryInstructors.some((i) => i.id === personId) ||
+      c.practiceInstructors.some((i) => i.id === personId)
+    );
+  });
+
+  if (collisions.length === 0) return;
+  const label = personRole === "student" ? "estudiante" : "instructor";
+  const groups = collisions.map((c) => `Clase ${c.name} (${c.code})`).join(", ");
+  throw new Error(
+    `Conflicto de horario: este ${label} ya está asignado en otro grupo con el mismo horario (${groups}).`
+  );
+};
+
+/**
+ * Evita que un estudiante quede inscrito en más de un curso.
+ * Si intenta inscribirse en un segundo curso, se bloquea.
+ */
+const assertStudentSingleCourse = async (
+  studentId: string,
+  targetCourseId: string
+): Promise<void> => {
+  const all = await getCourses();
+  const otherCourses = all.filter((c) => {
+    if (c.id === targetCourseId) return false;
+    return c.students.some((s) => s.id === studentId);
+  });
+
+  if (otherCourses.length > 0) {
+    const other = otherCourses[0];
+    throw new Error(
+      `El estudiante ya está inscrito en otro curso (${other.name} · ${other.code}).`
+    );
+  }
+};
+
 export const createCourse = async (data: CourseInput): Promise<Course> => {
+  const actor = getCurrentAuditActor();
   await assertUniqueName(data.name);
   const capacity = Math.min(data.capacity, MAX_CAPACITY);
   const code = await generateCourseCode();
@@ -147,20 +203,41 @@ export const createCourse = async (data: CourseInput): Promise<Course> => {
     theoryInstructors: [], practiceInstructors: [], students: [],
     createdAt: Timestamp.now(), updatedAt: Timestamp.now(),
   });
+  void createAuditLog({
+    action: "create_course",
+    module: "courses",
+    details: `Se creó curso ${data.name} (${code})`,
+    actorOverride: actor,
+  }).catch(() => {});
   return { id: ref.id, ...data, capacity, code,
     theoryInstructors: [], practiceInstructors: [], students: [],
     createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
 };
 
 export const updateCourse = async (id: string, data: Partial<CourseInput>): Promise<void> => {
+  const actor = getCurrentAuditActor();
   if (data.name) await assertUniqueName(data.name, id);
   const payload: any = { ...data, updatedAt: Timestamp.now() };
   if (payload.capacity) payload.capacity = Math.min(payload.capacity, MAX_CAPACITY);
   await updateDoc(doc(db, "courses", id), payload);
+  void createAuditLog({
+    action: "update_course",
+    module: "courses",
+    details: `Se actualizó curso ${id}`,
+    actorOverride: actor,
+  }).catch(() => {});
 };
 
-export const deleteCourse = async (id: string): Promise<void> =>
-  deleteDoc(doc(db, "courses", id));
+export const deleteCourse = async (id: string): Promise<void> => {
+  const actor = getCurrentAuditActor();
+  await deleteDoc(doc(db, "courses", id));
+  void createAuditLog({
+    action: "delete_course",
+    module: "courses",
+    details: `Se eliminó curso ${id}`,
+    actorOverride: actor,
+  }).catch(() => {});
+};
 
 /* ==========================
    BUSCAR USUARIO POR USERNAME
@@ -185,8 +262,14 @@ export const addInstructorByCode = async (
   username: string, type: "theory"|"practice",
   practiceSlots?: string[]
 ): Promise<CourseInstructor> => {
+  const actor = getCurrentAuditActor();
   const user = await findUserByUsername(username, "instructor");
   if (!user) throw new Error(`No existe un instructor con el código "${username}"`);
+
+  // Regla: una clase/práctica solo puede tener un profesor específico (único)
+  if (type === "practice" && course.practiceInstructors.length > 0) {
+    throw new Error("Este curso ya tiene un profesor de práctica asignado. Debe ser único.");
+  }
 
   const listKey  = type === "theory" ? "theoryInstructors" : "practiceInstructors";
   const maxLimit = type === "theory" ? MAX_THEORY_INSTRUCTORS : MAX_PRACTICE_INSTRUCTORS;
@@ -196,6 +279,7 @@ export const addInstructorByCode = async (
   const inAny = course.theoryInstructors.some((i) => i.id === user.id) ||
     course.practiceInstructors.some((i) => i.id === user.id);
   if (inAny) throw new Error("Este instructor ya está asignado al curso");
+  await assertNoScheduleConflict(user.id, "instructor", course);
   if (list.length >= maxLimit)
     throw new Error(`Límite de ${maxLimit} profesores de ${type === "theory" ? "teoría" : "práctica"} alcanzado`);
 
@@ -208,28 +292,48 @@ export const addInstructorByCode = async (
   await updateDoc(doc(db, "courses", courseId), {
     [listKey]: [...list, instructor], updatedAt: Timestamp.now(),
   });
+  void createAuditLog({
+    action: "assign_instructor",
+    module: "instructors",
+    details: `Asignado instructor ${instructor.name} a curso ${courseId} (${type})`,
+    actorOverride: actor,
+  }).catch(() => {});
   return instructor;
 };
 
 export const updatePracticeSlots = async (
   courseId: string, course: Course, instructorId: string, slots: string[]
 ): Promise<void> => {
+  const actor = getCurrentAuditActor();
   const updated = course.practiceInstructors.map((i) =>
     i.id === instructorId ? { ...i, practiceSlots: slots } : i
   );
   await updateDoc(doc(db, "courses", courseId), {
     practiceInstructors: updated, updatedAt: Timestamp.now(),
   });
+  void createAuditLog({
+    action: "update_instructor_slots",
+    module: "instructors",
+    details: `Actualizados horarios de práctica para instructor ${instructorId} en curso ${courseId}`,
+    actorOverride: actor,
+  }).catch(() => {});
 };
 
 export const removeInstructorFromCourse = async (
   courseId: string, course: Course, instructorId: string, type: "theory"|"practice"
 ): Promise<void> => {
+  const actor = getCurrentAuditActor();
   const listKey = type === "theory" ? "theoryInstructors" : "practiceInstructors";
   const list    = type === "theory" ? course.theoryInstructors : course.practiceInstructors;
   await updateDoc(doc(db, "courses", courseId), {
     [listKey]: list.filter((i) => i.id !== instructorId), updatedAt: Timestamp.now(),
   });
+  void createAuditLog({
+    action: "remove_instructor",
+    module: "instructors",
+    details: `Removido instructor ${instructorId} de curso ${courseId} (${type})`,
+    actorOverride: actor,
+  }).catch(() => {});
 };
 
 /* ==========================
@@ -242,6 +346,15 @@ export const addStudentByCode = async (
   if (!user) throw new Error(`No existe un estudiante con el código "${username}"`);
   if (course.students.some((s) => s.id === user.id))
     throw new Error("El estudiante ya está inscrito en este curso");
+
+  // Regla: una clase práctica únicamente puede tener un alumno
+  // (en este modelo, la práctica depende de que el curso tenga profesor de práctica asignado)
+  if (course.practiceInstructors.length > 0 && course.students.length >= 1) {
+    throw new Error("Este curso tiene práctica asignada y solo permite un estudiante.");
+  }
+
+  await assertNoScheduleConflict(user.id, "student", course);
+  await assertStudentSingleCourse(user.id, courseId);
   if (course.students.length >= course.capacity)
     throw new Error(`El curso alcanzó su capacidad máxima (${course.capacity})`);
 
@@ -287,6 +400,13 @@ export const enrollStudentByCourseCode = async (
   if (course.status !== "activo")  throw new Error("Este curso no está activo");
   if (course.students.some((s) => s.id === student.id))
     throw new Error("Ya estás inscrito en este curso");
+
+  if (course.practiceInstructors.length > 0 && course.students.length >= 1) {
+    throw new Error("Este curso tiene práctica asignada y solo permite un estudiante.");
+  }
+
+  await assertNoScheduleConflict(student.id, "student", course);
+  await assertStudentSingleCourse(student.id, d.id);
   if (course.students.length >= course.capacity)
     throw new Error("El curso está lleno");
 

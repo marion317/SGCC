@@ -1,4 +1,7 @@
-import { Bell, User } from 'lucide-react';
+// src/components/Header.tsx
+// MODIFICADO: Se integró NotificationBell en lugar del botón Bell estático
+import { User } from 'lucide-react';
+import { NotificationBell } from './NotificationBell';
 
 const roleLabels: Record<string, string> = {
   admin: 'Admin',
@@ -9,9 +12,10 @@ const roleLabels: Record<string, string> = {
 interface HeaderProps {
   userName?: string;
   userRole?: 'student' | 'admin' | 'instructor';
+  userId?: string;   // ← NUEVO prop requerido para notificaciones
 }
 
-export function Header({ userName, userRole }: HeaderProps) {
+export function Header({ userName, userRole, userId }: HeaderProps) {
   const roleLabel = userRole ? roleLabels[userRole] : 'Admin';
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -27,11 +31,9 @@ export function Header({ userName, userRole }: HeaderProps) {
         </div>
 
         <div className="flex items-center gap-4">
-          <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <Bell className="w-5 h-5 text-gray-600" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
-          
+          {/* Campana: solo visible para usuarios NO administradores */}
+          {userRole !== "admin" && <NotificationBell userId={userId ?? ""} />}
+
           <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
             <div className="text-right">
               <p className="text-sm">{userName || 'Usuario'}</p>

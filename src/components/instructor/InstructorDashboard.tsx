@@ -1,9 +1,14 @@
+// InstructorDashboard.tsx  ← MODIFICADO
+// Añade la vista 'evaluaciones' conectada al componente InstructorExams
+
 import { useState } from 'react';
 import { InstructorSidebar } from './InstructorSidebar';
 import { InstructorHeader } from './InstructorHeader';
 import { InstructorHome } from './InstructorHome';
 import { InstructorSchedule } from './InstructorSchedule';
 import { InstructorAttendance } from './InstructorAttendance';
+import { InstructorExams } from './InstructorExams'; // ← NUEVO
+import { InstructorClasses } from './InstructorClasses';
 
 interface InstructorDashboardProps {
   onLogout: () => void;
@@ -12,7 +17,12 @@ interface InstructorDashboardProps {
   userId: string;
 }
 
-export function InstructorDashboard({ onLogout, userDisplayName, userEmail, userId }: InstructorDashboardProps) {
+export function InstructorDashboard({
+  onLogout,
+  userDisplayName,
+  userEmail,
+  userId,
+}: InstructorDashboardProps) {
   const [currentView, setCurrentView] = useState('inicio');
 
   return (
@@ -27,9 +37,17 @@ export function InstructorDashboard({ onLogout, userDisplayName, userEmail, user
       <div className="flex-1 flex flex-col overflow-hidden">
         <InstructorHeader userName={userDisplayName} userRole="instructor" />
         <main className="flex-1 overflow-y-auto p-6">
-          {currentView === 'inicio'  && <InstructorHome userName={userDisplayName} />}
-          {currentView === 'horario' && <InstructorSchedule userId={userId} />}
-          {currentView === 'asistencia' && <InstructorAttendance userId={userId} />}
+          {currentView === 'inicio'       && <InstructorHome userName={userDisplayName} />}
+          {currentView === 'horario'      && <InstructorSchedule userId={userId} />}
+          {currentView === 'asistencia'   && <InstructorAttendance userId={userId} />}
+          {currentView === 'clases'       && <InstructorClasses userId={userId} />}
+          {/* ↓ NUEVA VISTA */}
+          {currentView === 'evaluaciones' && (
+            <InstructorExams
+              userId={userId}
+              userDisplayName={userDisplayName}
+            />
+          )}
         </main>
       </div>
     </div>
